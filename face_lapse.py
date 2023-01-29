@@ -23,13 +23,10 @@ def on_mouse(event, x, y, flags, params):
     global box, drawing_box
     if event == cv2.EVENT_LBUTTONDOWN:
         drawing_box = True
-        print('Start Mouse Position: ' + str(x) + ', ' + str(y))
         box = (x, y, 0, 0)
     elif event == cv2.EVENT_LBUTTONUP:
         drawing_box = False
-        print('End Mouse Position: ' + str(x) + ', ' + str(y))
         box = (box[0], box[1], x - box[0], y - box[1])
-        print(box)
     elif event == cv2.EVENT_MOUSEMOVE and drawing_box:
         box = (box[0], box[1], x - box[0], y - box[1])
 
@@ -102,7 +99,6 @@ def find_largest_face(gray, face_cascades, manual_mode, min_haar_face_size, colo
                 # if no face is found manually select face
     if len(faces) == 0 and manual_mode:
         face = select_face_manually(colour_img, border)
-        print(face)
     elif len(faces) == 0:
         return []
     else:
