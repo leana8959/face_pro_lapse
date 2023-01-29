@@ -8,6 +8,7 @@ import cv
 import glob
 import numpy as np
 import math
+from progressbar import ProgressBar, Percentage, Bar, ETA
 
 box = []
 drawing_box = False
@@ -233,7 +234,12 @@ def main():
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     video_writer = cv2.VideoWriter('video.avi', fourcc, fps, out_dimension)
 
-    for file_name in images:
+    pbar = ProgressBar(
+        maxval=len(images),
+        widgets=[Percentage(), Bar(), ETA()]
+    ).start()
+
+    for (count, file_name) in enumerate(images):
         img = cv2.imread(file_name)
         img = resize_frame(img, out_dimension)
 
@@ -266,6 +272,7 @@ def main():
         video_writer.write(out)
         cv2.imshow('face', out)
         cv2.waitKey(1)
+        pbar.update(count)
 
     video_writer.release()
     cv2.destroyAllWindows()
