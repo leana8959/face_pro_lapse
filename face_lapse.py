@@ -106,6 +106,7 @@ def find_largest_face(gray, face_cascades, manual_mode, min_haar_face_size, colo
     elif len(faces) == 0:
         return []
     else:
+        # TODO: breaks when manual_mode is off
         # Sort to get the largest face
         face = sorted(faces, key=lambda x: x[3])[-1]
 
@@ -172,36 +173,36 @@ def resize_frame(img, videoSize):
     @param videoSize          The size of the target video
     @returns img              Scaled image
     """
-    scl = 1
+    scalar = 1
     if img.shape[0] > img.shape[1]:
-        scl = float(videoSize[0]) / float(img.shape[0])
+        scalar = float(videoSize[0]) / float(img.shape[0])
     else:
-        scl = float(videoSize[1]) / float(img.shape[1])
-    img = cv2.resize(img, (0, 0), fx=scl, fy=scl)
+        scalar = float(videoSize[1]) / float(img.shape[1])
+    img = cv2.resize(img, (0, 0), fx=scalar, fy=scalar)
     return img
 
 
 def hist_equalisation_colour(img, clipLimit):
     """
-    Performs histogram equalisation on the image using the CLAHE method
+    (Experimental) Performs histogram equalisation on the image using the CLAHE method
 
     @param img		    Image containing face
     @param clipLimit          The CLAHE clip limit
     @returns img              Equalised image
     """
-    ycrcb = cv2.cvtColor(img, cv.CV_BGR2YCrCb)
-    y, Cr, Cb = cv2.split(ycrcb)
+    yCrCb = cv2.cvtColor(img, cv.CV_BGR2YCrCb)
+    y, cr, cb = cv2.split(yCrCb)
 
     clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=(8, 8))
     y = clahe.apply(y)
     # y = cv2.equalizeHist(y);
-    ycrcb = cv2.merge((y, Cr, Cb))
-    return cv2.cvtColor(ycrcb, cv.CV_YCrCb2BGR)
+    yCrCb = cv2.merge((y, cr, cb))
+    return cv2.cvtColor(yCrCb, cv.CV_YCrCb2BGR)
 
 
 def set_gamma(img, gamma):
     """
-    Set the gamma of the image
+    (Experimental) Set the gamma of the image
 
     @param img		    Image containing face
     @param gamma              The gamma value to be set
@@ -218,27 +219,27 @@ def main():
     # Parameters
     fps = 15.0
     face_height = 400
-    video_out_size = (1280, 720)
+    out_dimension = (1280, 720)
     manual_mode = True
     correct_colour = False  # Experimental
     # min size of the face found by the Haar cascade
     min_haar_face_size = (200, 200)
 
-    video_centre = (video_out_size[0] / 2, video_out_size[1] / 2)
+    frame_centre = (out_dimension[0] / 2, out_dimension[1] / 2)
+
     face_cascades = [
         cv2.CascadeClassifier('haarcascade_frontalface_alt.xml'),
         cv2.CascadeClassifier('haarcascade_frontalface_default.xml'),
         cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml'),
     ]
-
     eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-    video = cv2.VideoWriter('video.avi', fourcc, fps, video_out_size)
+    video_writer = cv2.VideoWriter('video.avi', fourcc, fps, out_dimension)
 
     for file_name in images:
         img = cv2.imread(file_name)
-        img = resize_frame(img, video_out_size)
+        img = resize_frame(img, out_dimension)
 
         # Experimental
         if correct_colour:
@@ -248,26 +249,29 @@ def main():
         # border added for faces at edges
         border = int(face_height / 2)
         colour_img = cv2.copyMakeBorder(
-            img, border, border, border, border, cv2.BORDER_CONSTANT)
+            img, border, border, border, border, cv2.BORDER_CONSTANT
+        )
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
 
         face = find_largest_face(
-            gray, face_cascades, manual_mode, min_haar_face_size, colour_img, border)
+            gray, face_cascades, manual_mode, min_haar_face_size, colour_img, border
+        )
 
-        if face is []:
+        if len(face) == 0:
             continue
 
         eye_angle = find_eye_angle(gray, face, eye_cascade)
-        out = position_image(img, face, eye_angle,
-                             face_height, video_centre, video_out_size)
+        out = position_image(
+            img, face, eye_angle, face_height, frame_centre, out_dimension
+        )
 
         # write to video file
-        video.write(out)
+        video_writer.write(out)
         cv2.imshow('face', out)
         cv2.waitKey(1)
 
-    video.release()
+    video_writer.release()
     cv2.destroyAllWindows()
 
 
